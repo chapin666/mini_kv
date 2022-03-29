@@ -123,7 +123,7 @@ pub mod value {
         #[prost(string, tag="1")]
         String(::prost::alloc::string::String),
         #[prost(bytes, tag="2")]
-        Binary(::prost::alloc::vec::Vec<u8>),
+        Binary(::prost::bytes::Bytes),
         #[prost(int64, tag="3")]
         Integer(i64),
         #[prost(double, tag="4")]
