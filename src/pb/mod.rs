@@ -9,7 +9,6 @@ use prost::Message;
 use crate::KvError;
 
 impl CommandRequest {
-
     // 创建 HGET 命令
     pub fn new_hget(table: impl Into<String>, key: impl Into<String>) -> Self {
         Self {
@@ -23,7 +22,7 @@ impl CommandRequest {
     // 创建 HGETALL 命令
     pub fn new_hgetall(table: impl Into<String>) -> Self {
         Self {
-            request_data: Some(RequestData::Hgetall(Hgetall{
+            request_data: Some(RequestData::Hgetall(Hgetall {
                 table: table.into(),
             })),
         }
@@ -68,7 +67,6 @@ impl From<&str> for Value {
     }
 }
 
-
 impl From<i64> for Value {
     fn from(i: i64) -> Self {
         Self {
@@ -76,6 +74,38 @@ impl From<i64> for Value {
         }
     }
 }
+
+impl From<bool> for Value {
+    fn from(b: bool) -> Self {
+        Self {
+            value: Some(value::Value::Bool(b)),
+        }
+    }
+}
+
+impl From<f64> for Value {
+    fn from(b: f64) -> Self {
+        Self {
+            value: Some(value::Value::Float(b)),
+        }
+    }
+}
+
+impl<const N: usize> From<&[u8; N]> for Value {
+    fn from(buf: &[u8; N]) -> Self {
+        Bytes::copy_from_slice(&buf[..]).into()
+    }
+}
+
+impl From<Bytes> for Value {
+    fn from(buf: Bytes) -> Self {
+        Self {
+            value: Some(value::Value::Binary(buf)),
+        }
+    }
+}
+
+
 
 impl From<Value> for CommandResponse {
     fn from(v: Value) -> Self {
@@ -116,18 +146,25 @@ impl From<KvError> for CommandResponse {
     }
 }
 
-impl From<bool> for Value {
-    fn from(b: bool) -> Self {
+impl From<Vec<Value>> for CommandResponse {
+    fn from(v: Vec<Value>) -> Self {
         Self {
-            value: Some(value::Value::Bool(b)),
+            status: StatusCode::OK.as_u16() as _,
+            values: v,
+            ..Default::default()
         }
     }
 }
 
-impl From<f64> for Value {
-    fn from(b: f64) -> Self {
-        Self {
-            value: Some(value::Value::Float(b)),
+
+
+impl TryFrom<Value> for bool {
+    type Error = KvError;
+
+    fn try_from(v: Value) -> Result<Self, Self::Error> {
+        match v.value {
+            Some(value::Value::Bool(b)) => Ok(b),
+            _ => Err(KvError::ConvertError(v, "Boolean")),
         }
     }
 }
@@ -165,23 +202,11 @@ impl TryFrom<Value> for Bytes {
     }
 }
 
-impl TryFrom<Value> for bool {
-    type Error = KvError;
-
-    fn try_from(v: Value) -> Result<Self, Self::Error> {
-        match v.value {
-            Some(value::Value::Bool(b)) => Ok(b),
-            _ => Err(KvError::ConvertError(v, "Boolean")),
-        }
-    }
-}
-
-
 impl TryFrom<Value> for Vec<u8> {
     type Error = KvError;
 
     fn try_from(v: Value) -> Result<Self, Self::Error> {
-       let mut buf = Vec::with_capacity(v.encoded_len());
+        let mut buf = Vec::with_capacity(v.encoded_len());
         v.encode(&mut buf)?;
         Ok(buf)
     }

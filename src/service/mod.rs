@@ -196,7 +196,7 @@ use crate::{Kvpair, Value};
 use crate::command_request::RequestData;
 
 #[cfg(test)]
-fn assert_res_ok(mut res: CommandResponse, values: &[Value], pairs: &[Kvpair]) {
+pub fn assert_res_ok(mut res: CommandResponse, values: &[Value], pairs: &[Kvpair]) {
     res.pairs.sort_by(|a, b| a.partial_cmp(b).unwrap());
     assert_eq!(res.status, 200);
     assert_eq!(res.message, "");
@@ -205,7 +205,7 @@ fn assert_res_ok(mut res: CommandResponse, values: &[Value], pairs: &[Kvpair]) {
 }
 
 #[cfg(test)]
-fn assert_res_error(res: CommandResponse, code: u32, msg: &str) {
+pub fn assert_res_error(res: CommandResponse, code: u32, msg: &str) {
     assert_eq!(res.status, code);
     assert!(res.message.contains(msg));
     assert_eq!(res.values, &[]);

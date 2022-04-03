@@ -25,13 +25,6 @@ impl MemTable {
     }
 }
 
-
-impl From<(String, Value)> for Kvpair {
-    fn from(data: (String, Value)) -> Self {
-        Kvpair::new(data.0, data.1)
-    }
-}
-
 impl Storage for MemTable {
     fn get(&self, table: &str, key: &str) -> Result<Option<Value>, KvError> {
         let table = self.get_or_create_table(table);
@@ -66,5 +59,11 @@ impl Storage for MemTable {
         let table = self.get_or_create_table(table).clone();
         let iter = StorageIter::new(table.into_iter());
         Ok(Box::new(iter))
+    }
+}
+
+impl From<(String, Value)> for Kvpair {
+    fn from(data: (String, Value)) -> Self {
+        Kvpair::new(data.0, data.1)
     }
 }
