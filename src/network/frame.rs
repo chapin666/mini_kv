@@ -125,6 +125,7 @@ mod tests {
     use crate::Value;
     use bytes::Bytes;
     use tokio::io::ReadBuf;
+    use crate::utils::DummyStream;
 
     #[test]
     fn command_request_encode_decode_should_work() {
@@ -180,28 +181,6 @@ mod tests {
         let cmd1 = CommandRequest::decode_frame(&mut data).unwrap();
         assert_eq!(cmd, cmd1);
     }
-
-
-    struct DummyStream {
-        buf: BytesMut,
-    }
-
-    impl AsyncRead for DummyStream {
-        fn poll_read(
-            self: Pin<&mut Self>,
-            _cx: &mut Context<'_>,
-            buf: &mut ReadBuf<'_>,
-        ) -> Poll<std::io::Result<()>> {
-            let len = buf.capacity();
-
-            let data = self.get_mut().buf.split_to(len);
-
-            buf.put_slice(&data);
-
-            std::task::Poll::Ready(Ok(()))
-        }
-    }
-
 
     fn is_compressed(data: &[u8]) -> bool {
         if let &[v] = &data[..1] {
