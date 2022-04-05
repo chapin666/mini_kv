@@ -1,12 +1,15 @@
 mod frame;
+mod tls;
+
+pub use frame::{read_frame, FrameCoder};
+pub use tls::{TlsClientConnector, TlsServerAcceptor};
 
 use bytes::BytesMut;
 use prost::encoding::group::encode;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tracing::info;
-pub use frame::FrameCoder;
+
 use crate::{CommandRequest, CommandResponse, KvError, Service};
-use crate::network::frame::read_frame;
 
 /// 处理服务器端的某个 accept 下来的 socket 的读写
 pub struct ProstServerStream<S> {
