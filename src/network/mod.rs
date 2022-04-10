@@ -14,14 +14,14 @@ use prost::encoding::group::encode;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tracing::info;
 
-use crate::{CommandRequest, CommandResponse, KvError, Service};
+use crate::{CommandRequest, CommandResponse, KvError, Service, Storage};
 use crate::network::stream::ProstStream;
 use crate::network::stream_result::StreamResult;
 
 /// 处理服务器端的某个 accept 下来的 socket 的读写
-pub struct ProstServerStream<S> {
+pub struct ProstServerStream<S, Store> {
     inner: ProstStream<S, CommandRequest, CommandResponse>,
-    service: Service,
+    service: Service<Store>,
 }
 
 /// 处理客户端的 socket 读写
@@ -29,10 +29,11 @@ pub struct ProstClientStream<S> {
     inner: ProstStream<S, CommandResponse, CommandRequest>,
 }
 
-impl<S> ProstServerStream<S> where
+impl<S, Store> ProstServerStream<S, Store> where
     S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
+    Store: Storage,
 {
-    pub fn new(stream: S, service: Service) -> Self {
+    pub fn new(stream: S, service: Service<Store>) -> Self {
         Self {
             inner: ProstStream::new(stream),
             service,
