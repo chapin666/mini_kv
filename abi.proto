@@ -9,8 +9,12 @@ message CommandRequest {
     Hset hset = 4;
     Hmset hmset = 5;
     Hdel hdel = 6;
+    Hmdel hmdel = 7;
     Hexist hexist = 8;
     Hmexist hmexist = 9;
+    Subscribe subscribe = 10;
+    Unsubscribe unsubscribe = 11;
+    Publish publish = 12;
   }
 }
 
@@ -30,20 +34,12 @@ message Hgetall {
   string table = 1;
 }
 
-message Hmget {
-  string table = 1;
-  repeated string keys = 2;
-}
 
 message Hset {
   string table = 1;
   Kvpair pair = 2;
 }
 
-message Hmset {
-  string table = 1;
-  repeated Kvpair pairs = 2;
-}
 
 message Hdel {
   string table = 1;
@@ -55,14 +51,49 @@ message Hexist {
   string key = 2;
 }
 
+message Hmget {
+  string table = 1;
+  repeated string keys = 2;
+}
+
+message Hmset {
+  string table = 1;
+  repeated Kvpair pairs = 2;
+}
+
 message Hmexist {
   string table = 1;
   repeated string keys = 2;
 }
 
+message Hmdel {
+  string table = 1;
+  repeated string keys = 2;
+}
+
+
 message Kvpair {
   string key = 1;
   Value value = 2;
+}
+
+
+// subscribe 到某个主题，任何发布到这个主题的数据都会被收到
+// 成功后，第一个返回的 CommandResponse, 我们返回唯一的subscrition id
+message Subscribe {
+  string topic = 1;
+}
+
+// 取消对某个主题的订阅
+message Unsubscribe {
+  string topic = 1;
+  uint32 id = 2;
+}
+
+// 发布数据到某个主题
+message Publish {
+  string topic = 1;
+  repeated Value data = 2;
 }
 
 message Value {

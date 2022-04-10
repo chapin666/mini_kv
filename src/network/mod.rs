@@ -1,9 +1,12 @@
 mod frame;
 mod tls;
 mod stream;
+mod multiplex;
+mod stream_result;
 
 pub use frame::{read_frame, FrameCoder};
 pub use tls::{TlsClientConnector, TlsServerAcceptor};
+pub use multiplex::YamuxCtrl;
 
 use bytes::BytesMut;
 use futures::{SinkExt, StreamExt};
@@ -13,6 +16,7 @@ use tracing::info;
 
 use crate::{CommandRequest, CommandResponse, KvError, Service};
 use crate::network::stream::ProstStream;
+use crate::network::stream_result::StreamResult;
 
 /// 处理服务器端的某个 accept 下来的 socket 的读写
 pub struct ProstServerStream<S> {
@@ -26,7 +30,7 @@ pub struct ProstClientStream<S> {
 }
 
 impl<S> ProstServerStream<S> where
-    S: AsyncRead + AsyncWrite + Unpin + Send,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     pub fn new(stream: S, service: Service) -> Self {
         Self {
@@ -39,15 +43,18 @@ impl<S> ProstServerStream<S> where
         let stream = &mut self.inner;
         while let Some(Ok(cmd)) = stream.next().await {
             info!("Got a new command: {:?}", cmd);
-            let res = self.service.execute(cmd);
-            stream.send(res).await.unwrap();
+            let mut res = self.service.execute(cmd);
+            while let Some(data) = res.next().await {
+                stream.send(&data).await.unwrap();
+            }
         }
+        // info!("Client {:?} disconnected", self.addr);
         Ok(())
     }
 }
 
 impl<S> ProstClientStream<S> where
-    S: AsyncRead + AsyncWrite + Unpin + Send,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     pub fn new(stream: S) -> Self {
         Self {
@@ -55,7 +62,7 @@ impl<S> ProstClientStream<S> where
         }
     }
 
-    pub async fn execute(&mut self, cmd: CommandRequest) -> Result<CommandResponse, KvError> {
+    pub async fn execute_unary(&mut self, cmd: &CommandRequest) -> Result<CommandResponse, KvError> {
         let stream = &mut self.inner;
         stream.send(cmd).await?;
 
@@ -65,6 +72,12 @@ impl<S> ProstClientStream<S> where
         }
     }
 
+    pub async fn execute_streaming(self, cmd: &CommandRequest) -> Result<StreamResult, KvError> {
+        let mut stream = self.inner;
+        stream.send(cmd).await?;
+        stream.close().await?;
+        StreamResult::new(stream).await
+    }
 }
 
 #[cfg(test)]
@@ -85,16 +98,16 @@ mod test {
 
         // 发送 hset, 等待回应
         let cmd = CommandRequest::new_hset("t1", "k1", "v1".into());
-        let res = client.execute(cmd).await.unwrap();
+        let res = client.execute_unary(&cmd).await.unwrap();
 
         // 第一次 HSET 服务器应该返回 NONE
-        assert_res_ok(res, &[Value::default()], &[]);
+        assert_res_ok(&res, &[Value::default()], &[]);
 
         // 再发一个 HSET
         let cmd = CommandRequest::new_hget("t1", "k1");
-        let res = client.execute(cmd).await?;
+        let res = client.execute_unary(&cmd).await?;
 
-        assert_res_ok(res, &["v1".into()], &[]);
+        assert_res_ok(&res, &["v1".into()], &[]);
 
         Ok(())
     }
@@ -107,12 +120,12 @@ mod test {
 
         let v: Value = Bytes::from(vec![0u8; 16384]).into();
         let cmd = CommandRequest::new_hset("t2", "k2", v.clone().into());
-        let res = client.execute(cmd).await?;
-        assert_res_ok(res, &[Value::default()], &[]);
+        let res = client.execute_unary(&cmd).await?;
+        assert_res_ok(&res, &[Value::default()], &[]);
 
         let cmd = CommandRequest::new_hget("t2", "k2");
-        let res = client.execute(cmd).await?;
-        assert_res_ok(res, &[v.into()], &[]);
+        let res = client.execute_unary(&cmd).await?;
+        assert_res_ok(&res, &[v.into()], &[]);
 
         Ok(())
     }
@@ -123,7 +136,7 @@ mod test {
 
         tokio::spawn(async move {
             loop {
-                let(stream, _) = listener.accept().await.unwrap();
+                let (stream, _) = listener.accept().await.unwrap();
                 let service: Service = ServiceInner::new(MemTable::new()).into();
                 let server = ProstServerStream::new(stream, service);
                 tokio::spawn(server.process());
@@ -174,6 +187,4 @@ pub mod utils {
             Poll::Ready(Ok(()))
         }
     }
-
-
 }

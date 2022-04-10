@@ -23,7 +23,10 @@ rustls-native-certs = "0.5"
 sled = "0.34" # sled db
 thiserror = "1" # 错误定义和处理
 tokio = { version = "1", features = ["full" ] } # 异步网络库
-tokio-rustls = "0.22"
+tokio-rustls = "0.22" # 处理 TLS
+tokio-stream = { version = "0.1", features = ["sync"] } # 处理 stream
+tokio-util = { version = "0.6", features = ["compat"]} # tokio 和 futures 的兼容性库
+yamux = "0.10.1"
 tracing = "0.1" # 日志处理
 tracing-subscriber = "0.2" # 日志处理
 
@@ -31,7 +34,7 @@ tracing-subscriber = "0.2" # 日志处理
 async-prost = "0.2.1" # 支持把 protobuf 封装成 TCP frame
 certify = "0.3" # CA 证数
 tempfile = "3" # 处理临时目录和临时文件
-tokio-util = { version = "0.6", features = ["codec"] }
+tokio-util = { version = "0.6", features = ["codec"]}
 
 [build-dependencies]
 prost-build = "0.8" # 编译 protobuf
