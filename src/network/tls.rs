@@ -30,7 +30,7 @@ impl TlsClientConnector {
 
     #[instrument(name = "tls_connector_new", skip_all)]
     pub fn new(
-        domain: impl Into<String>,
+        domain: impl Into<String> + std::fmt::Debug,
         identity: Option<(&str, &str)>,
         server_ca: Option<&str>,
     ) -> Result<Self, KvError> {

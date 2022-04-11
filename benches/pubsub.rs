@@ -1,7 +1,10 @@
-use std::net::ToSocketAddrs;
 use anyhow::Result;
 use criterion::{criterion_group, criterion_main, Criterion};
 use futures::StreamExt;
+use mini_kv::{
+    start_client_with_config, start_server_with_config, ClientConfig, CommandRequest, ServerConfig,
+    StorageConfig, YamuxCtrl,
+};
 use rand::prelude::SliceRandom;
 use std::time::Duration;
 use tokio::net::TcpStream;
@@ -10,10 +13,7 @@ use tokio::time;
 use tokio_rustls::client::TlsStream;
 use tracing::{info, span};
 use tracing_subscriber::{layer::SubscriberExt, prelude::*, EnvFilter};
-use mini_kv::{
-    start_client_with_config, start_server_with_config, ClientConfig, CommandRequest, ServerConfig,
-    StorageConfig, YamuxCtrl,
-};
+use tracing_subscriber::fmt::try_init;
 
 async fn start_server() -> Result<()> {
     let addr = "127.0.0.1:9999";
@@ -68,17 +68,16 @@ async fn start_publishers(topic: &'static str, values: &'static [&'static str]) 
 fn pubsub(c: &mut Criterion) {
     let tracer = opentelemetry_jaeger::new_pipeline()
         .with_service_name("kv-bench")
-        .with_agent_endpoint("192.168.64.2:6832")
         .install_simple()
         .unwrap();
-    let opentelemetry = tracing_opentelemetry::layer()
-        .with_tracer(tracer);
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
     tracing_subscriber::registry()
         .with(EnvFilter::from_default_env())
         .with(opentelemetry)
-        .init();
+        .try_init()
+        .unwrap();
 
-    let root = span!(tracing::Level::INFO, "app_start");
+    let root = span!(tracing::Level::INFO, "app_start", work_units = 2);
     let _enter = root.enter();
 
     // 创建 Tokio runtime
@@ -88,18 +87,18 @@ fn pubsub(c: &mut Criterion) {
         .enable_all()
         .build()
         .unwrap();
-    let base_str = include_str!("../fixtures/server.conf");
 
-    let values = Box::leak(
+    let base_str = include_str!("../fixtures/server.conf"); // 891 bytes
+
+    let values: &'static [&'static str] = Box::leak(
         vec![
             &base_str[..64],
             &base_str[..128],
             &base_str[..256],
             &base_str[..512],
-        ].into_boxed_slice(),
+        ]
+            .into_boxed_slice(),
     );
-
-
     let topic = "lobby";
 
     // 运行服务器和 100 个 subscriber，为测试准备

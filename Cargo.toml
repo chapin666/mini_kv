@@ -33,10 +33,10 @@ tokio-util = { version = "0.6", features = ["compat"] } # tokio 和 futures 的�
 yamux = "0.10.1"
 serde = { version = "1", features = ["derive"] } # 序列化/反序列化
 toml = "0.5" # toml 支持
-opentelemetry-jaeger = "0.15" # opentelemetry jaeger 支持
 tracing = "0.1" # 日志处理
 tracing-appender = "0.1" # 文件日志
 tracing-opentelemetry = "0.15" # opentelemetry 支持
+opentelemetry-jaeger = "0.15" # opentelemetry jaeger 支持
 tracing-subscriber = { version = "0.2", features = ["json", "chrono"] } # 日志处理
 
 [dev-dependencies]
