@@ -5,8 +5,10 @@ mod multiplex;
 mod stream_result;
 
 pub use frame::{read_frame, FrameCoder};
-pub use tls::{TlsClientConnector, TlsServerAcceptor};
 pub use multiplex::YamuxCtrl;
+pub use stream::ProstStream;
+pub use stream_result::StreamResult;
+pub use tls::{TlsClientConnector, TlsServerAcceptor};
 
 use bytes::BytesMut;
 use futures::{SinkExt, StreamExt};
@@ -15,8 +17,6 @@ use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tracing::info;
 
 use crate::{CommandRequest, CommandResponse, KvError, Service, Storage};
-use crate::network::stream::ProstStream;
-use crate::network::stream_result::StreamResult;
 
 /// 处理服务器端的某个 accept 下来的 socket 的读写
 pub struct ProstServerStream<S, Store> {

@@ -4,7 +4,7 @@ use std::sync::{
     Arc,
 };
 use tokio::sync::mpsc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info, instrument, warn};
 
 use crate::{CommandResponse, KvError, Value};
 
@@ -38,6 +38,8 @@ pub struct Broadcaster {
 }
 
 impl Topic for Arc<Broadcaster> {
+
+    #[instrument(name = "topic_subscribe", skip_all)]
     fn subscribe(self, name: String) -> mpsc::Receiver<Arc<CommandResponse>> {
         let id = {
             let entry = self.topics.entry(name).or_default();
@@ -67,6 +69,7 @@ impl Topic for Arc<Broadcaster> {
         rx
     }
 
+    #[instrument(name = "topic_unsubscribe", skip_all)]
     fn unsubscribe(self, name: String, id: u32) -> Result<u32, KvError> {
         match self.remove_subscription(name, id) {
             Some(id) => Ok(id),
@@ -74,6 +77,7 @@ impl Topic for Arc<Broadcaster> {
         }
     }
 
+    #[instrument(name = "topic_publish", skip_all)]
     fn publish(self, name: String, value: Arc<CommandResponse>) {
         tokio::spawn(async move {
             let mut ids = vec![];
